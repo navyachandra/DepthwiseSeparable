@@ -10,8 +10,8 @@
 #define BLOCK_SIZE 16
 #define CWIDTH 16
 #define CHEIGHT 16
-#define FWIDTH 7
-#define FHEIGHT 7
+#define FWIDTH 5
+#define FHEIGHT 5
 #define CNUMBER 16
 #define centerX (FWIDTH/2)
 #define centerY (FHEIGHT/2)
@@ -45,13 +45,14 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
     if(threadIdx.y >= centerY && threadIdx.y < CHEIGHT - centerY)
     {
         int f_start_y = threadIdx.y - centerY;
-        for(int i = centerX; i < CWIDTH - centerX; i++)
+        for(int m = 0; m < FHEIGHT; m++)
         {
-            int f_start_x = i - centerX;
-            for(int m = 0; m < FHEIGHT; m++)
+            for(int n = 0; n < FWIDTH; n++)
             {
-                for(int n = 0; n < FWIDTH; n++)
+                #pragma unroll
+                for(int i = centerX; i < CWIDTH - centerX; i++)
                 {
+                    int f_start_x = i - centerX;
                     output[i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
                 }
             }
@@ -61,7 +62,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
         {
             //int f_start_y = threadIdx.y - centerY;
             //int f_start_x = 0;
-            
+            #pragma unroll
             for(int m = 0; m < FHEIGHT; m++)
             {
                 int f_start_x = 0;
@@ -71,11 +72,12 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
                 }
             }
         }
-        //int l = centerX;
+
         for(int i = 0; i < centerX; i++)
         {
             //int f_start_y = threadIdx.y - centerY;
             int f_start_x = (CWIDTH - 1) - i - centerX;
+            #pragma unroll
             for(int m = 0; m < FHEIGHT; m++)
             {
                 for(int n = 0; n < FWIDTH - centerX + i; n++)
@@ -83,22 +85,26 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
                     output[(CWIDTH - 1) - i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
                 }
             }
-            //l--;
+
         }
     }
 
     if(threadIdx.y < centerY)
     {
-        
-        for(int i = centerX; i < CWIDTH - centerX; i++)
+      
+        for(int m = centerY - threadIdx.y; m < FHEIGHT; m++)
         {
-            //int l = 0;
             int f_start_y = 0;
-            int f_start_x = i - centerX;
-            for(int m = centerY - threadIdx.y; m < FHEIGHT; m++)
+            for(int n = 0; n < FWIDTH; n++)
             {
-                for(int n = 0; n < FWIDTH; n++)
+                #pragma unroll
+                for(int i = centerX; i < CWIDTH - centerX; i++)
                 {
+                    //int l = 0;
+                    
+                    int f_start_x = i - centerX;
+
+
                     output[i] += input[f_start_y][f_start_x + n][threadIdx.x] * filter[m][n];
                 }
                 f_start_y++;
@@ -110,6 +116,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
         {
             int f_start_y = 0;
             //int f_start_x = i;
+            #pragma unroll
             for(int m = centerY - threadIdx.y; m < FHEIGHT; m++)
             {
                 int f_start_x = 0;
@@ -124,6 +131,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
         {
             int f_start_y = 0;
             int f_start_x = (CWIDTH - 1) - i - centerX;
+            #pragma unroll
             for(int m = centerY - threadIdx.y; m < FHEIGHT; m++)
             {
                 for(int n = 0; n < FWIDTH - centerX + i; n++)
@@ -137,15 +145,17 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
 
     if(threadIdx.y >= CHEIGHT - centerY)
     {
-        
-        for(int i = centerX; i < CWIDTH - centerX; i++)
+        for(int m = 0; m < (FHEIGHT - centerY) + CHEIGHT - threadIdx.y - 1; m++)
         {
-            int f_start_y = threadIdx.y - centerY;
-            int f_start_x = i - centerX;
-            for(int m = 0; m < (FHEIGHT - centerY) + CHEIGHT - threadIdx.y - 1; m++)
+            for(int n = 0; n < FWIDTH; n++)
             {
-                for(int n = 0; n < FWIDTH; n++)
+                #pragma unroll
+                for(int i = centerX; i < CWIDTH - centerX; i++)
                 {
+                    int f_start_y = threadIdx.y - centerY;
+                    int f_start_x = i - centerX;
+                    //#pragma unroll
+
                     output[i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
                 }
             }
@@ -154,7 +164,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
         {
             int f_start_y = threadIdx.y - centerY;
             //int f_start_y = threadIdx.y;
-            
+            #pragma unroll
             for(int m = 0; m < (FHEIGHT - centerY) + CHEIGHT - threadIdx.y - 1; m++)
             {
                 int f_start_x = 0;
@@ -169,6 +179,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
             int f_start_y = threadIdx.y - centerY;
             //int f_start_y = threadIdx.y;
             int f_start_x = (CWIDTH - 1) - i - centerX;
+            #pragma unroll
             for(int m = 0; m < (FHEIGHT - centerY) + CHEIGHT - threadIdx.y - 1; m++)
             {
                 for(int n = 0; n < FWIDTH - centerX + i; n++)
@@ -180,14 +191,14 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
     }
 
 
-    
+    /*
     if(threadIdx.x == 0 && threadIdx.y == 14)
     {
         for(int i = 0; i < CWIDTH; i++)
             printf("%.1f ",output[i]);
         printf("\n");
     }
-    
+    */
     for(int i = 0; i < CWIDTH; i++)
     {
         OC[threadIdx.y * CNUMBER * CWIDTH + i * CNUMBER + threadIdx.x] = output[i];
