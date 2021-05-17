@@ -51,7 +51,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
             
             for(int i = FWIDTH - 1; i <= CWIDTH - FWIDTH; i++)
             {
-                int in = input[j][i][threadIdx.x];
+                float in = input[j][i][threadIdx.x];
                 int t = 0;
                 for(int n = i - 2; n <= i + 2; n++)
                 {
@@ -60,7 +60,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
 
             }
             int i = FWIDTH - 2;
-            int in = input[j][i][threadIdx.x];
+            float in = input[j][i][threadIdx.x];
             int t = 1;
             #pragma unroll
             for(int n = i - 1; n <= i + 2; n++)
@@ -179,7 +179,93 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
 
     if(threadIdx.y < centerY)
     {
+        int f = centerY - threadIdx.y;
         
+        for(int j = 0; j <= threadIdx.y + 2; j++)
+        {
+            
+            for(int i = FWIDTH - 1; i <= CWIDTH - FWIDTH; i++)
+            {
+                float in = input[j][i][threadIdx.x];
+                int t = 0;
+                for(int n = i - 2; n <= i + 2; n++)
+                {
+                    output[n] += in * filter[f][t++];
+                }
+
+            }
+            int i = FWIDTH - 2;
+            float in = input[j][i][threadIdx.x];
+            int t = 1;
+            #pragma unroll
+            for(int n = i - 1; n <= i + 2; n++)
+            {
+                output[n] += in * filter[f][t++];
+            }
+            i = FWIDTH - 3;
+            in = input[j][i][threadIdx.x];
+            t = 2;
+            #pragma unroll
+            for(int n = i; n <= i + 2; n++)
+            {
+                output[n] += in * filter[f][t++];
+            }
+            i = CWIDTH - FWIDTH + 1;
+            in = input[j][i][threadIdx.x];
+            t = 0;
+            #pragma unroll
+            for(int n = i - 2; n <= i + 1; n++)
+            {
+                output[n] += in * filter[f][t++];
+            }
+            i = CWIDTH - FWIDTH + 2;
+            in = input[j][i][threadIdx.x];
+            t = 0;
+            #pragma unroll
+            for(int n = i - 2; n <= i; n++)
+            {
+                output[n] += in * filter[f][t++];
+            }
+            f++;
+        }         
+        
+        int f_start_y = threadIdx.y - centerY;
+        for(int i = centerX; i <= FWIDTH - centerX; i++)
+        {
+            int f_start_x = i - centerX;
+            for(int m = centerY - threadIdx.y; m < FHEIGHT; m++)
+            {
+                for(int n = 0; n < centerX - f_start_x; n++)
+                {
+                    output[i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
+                }
+            }                            
+        }
+
+        // FWIDTH edges for column
+        int i = CWIDTH - FWIDTH + 1;
+        int f_start_x = i - centerX;
+        f_start_y = threadIdx.y - centerY;
+        for(int m = centerY - threadIdx.y; m < FHEIGHT; m++)
+        {
+            int n = 4;
+            output[i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
+            
+        } 
+        i = CWIDTH - FWIDTH + 2; 
+        f_start_y = threadIdx.y - centerY;
+        f_start_x = i - centerX;
+        for(int m = centerY - threadIdx.y; m < FHEIGHT; m++)
+        {
+            for(int n = 3; n <= 4; n++)
+            {
+                output[i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
+            }
+        } 
+        
+
+
+        /*
         for(int i = centerX; i < CWIDTH - centerX; i++)
         {
             //int l = 0;
@@ -195,7 +281,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
             }
 
         }
-        
+        */
         for(int i = 0; i < centerX; i++)
         {
             int f_start_y = 0;
@@ -225,9 +311,99 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
         }
     }
 
+
+
     if(threadIdx.y >= CHEIGHT - centerY)
     {
+    
+        int f = 0;
         
+        for(int j = threadIdx.y - centerY; j <= 15; j++)
+        {
+            
+            for(int i = FWIDTH - 1; i <= CWIDTH - FWIDTH; i++)
+            {
+                float in = input[j][i][threadIdx.x];
+                int t = 0;
+                for(int n = i - 2; n <= i + 2; n++)
+                {
+                    output[n] += in * filter[f][t++];
+                }
+
+            }
+            int i = FWIDTH - 2;
+            float in = input[j][i][threadIdx.x];
+            int t = 1;
+            #pragma unroll
+            for(int n = i - 1; n <= i + 2; n++)
+            {
+                output[n] += in * filter[f][t++];
+            }
+            i = FWIDTH - 3;
+            in = input[j][i][threadIdx.x];
+            t = 2;
+            #pragma unroll
+            for(int n = i; n <= i + 2; n++)
+            {
+                output[n] += in * filter[f][t++];
+            }
+            i = CWIDTH - FWIDTH + 1;
+            in = input[j][i][threadIdx.x];
+            t = 0;
+            #pragma unroll
+            for(int n = i - 2; n <= i + 1; n++)
+            {
+                output[n] += in * filter[f][t++];
+            }
+            i = CWIDTH - FWIDTH + 2;
+            in = input[j][i][threadIdx.x];
+            t = 0;
+            #pragma unroll
+            for(int n = i - 2; n <= i; n++)
+            {
+                output[n] += in * filter[f][t++];
+            }
+            f++;
+        }         
+        // FWIDTH edges for column
+        int f_start_y = threadIdx.y - centerY;
+        for(int i = centerX; i <= FWIDTH - centerX; i++)
+        {
+            int f_start_x = i - centerX;
+            for(int m = 0; m < (FHEIGHT - centerY) + CHEIGHT - threadIdx.y - 1; m++)
+            {
+                for(int n = 0; n < centerX - f_start_x; n++)
+                {
+                    output[i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
+                }
+            }                            
+        }
+        
+        
+        
+        int i = CWIDTH - FWIDTH + 1;
+        int f_start_x = i - centerX;
+        f_start_y = threadIdx.y - centerY;
+        for(int m = 0; m < (FHEIGHT - centerY) + CHEIGHT - threadIdx.y - 1; m++)
+        {
+            int n = 4;
+            output[i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
+            
+        } 
+        i = CWIDTH - FWIDTH + 2; 
+        f_start_y = threadIdx.y - centerY;
+        f_start_x = i - centerX;
+        for(int m = 0; m < (FHEIGHT - centerY) + CHEIGHT - threadIdx.y - 1; m++)
+        {
+            for(int n = 3; n <= 4; n++)
+            {
+                output[i] += input[f_start_y + m][f_start_x + n][threadIdx.x] * filter[m][n];
+            }
+        }  
+        
+
+
+        /*
         for(int i = centerX; i < CWIDTH - centerX; i++)
         {
             int f_start_y = threadIdx.y - centerY;
@@ -240,6 +416,7 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
                 }
             }
         }
+        */
         for(int i = 0; i < centerX; i++)
         {
             int f_start_y = threadIdx.y - centerY;
@@ -270,14 +447,14 @@ __global__ void convolute_kernel(float *IC, float*F, float *OC) {
     }
 
 
-    
-    if(threadIdx.x == 0 && threadIdx.y == 2)
+    /*
+    if(threadIdx.x == 0 && threadIdx.y == 14)
     {
         for(int i = 0; i < CWIDTH; i++)
             printf("%.1f ",output[i]);
         printf("\n");
     }
-    
+    */
     for(int i = 0; i < CWIDTH; i++)
     {
         OC[threadIdx.y * CNUMBER * CWIDTH + i * CNUMBER + threadIdx.x] = output[i];
